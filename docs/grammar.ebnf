@@ -1,7 +1,5 @@
 (* ================================================================
    C-Lite Language Grammar Specification
-   CO523 Programming Languages - Project Specification §3
-   Aligned with Week 2: Syntax and Semantics (BNF/EBNF, Parse Trees)
    ================================================================ *)
 
 (* ==================== PROGRAM STRUCTURE ==================== *)

@@ -28,7 +28,7 @@ class ParserError(CLiteError):
 
 class SemanticError(CLiteError):
     """
-    Raised when semantic analysis fails (e.g., undefined variable).
+    Raised when semantic analysis fails.
     Includes source location for precise error reporting.
     """
     def __init__(self, message: str, line: int, column: int):
