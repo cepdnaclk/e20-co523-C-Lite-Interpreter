@@ -6,6 +6,7 @@ FIRST(statement) = { identifier, if, printf, {, ; }
 FIRST(expression) = { number, identifier, (, +, - }
 
 ***
+
 ###### FOLLOW Sets
 
 FOLLOW(program) = { $ }  (end of input)
