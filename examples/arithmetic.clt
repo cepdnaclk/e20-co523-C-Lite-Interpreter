@@ -1,0 +1,11 @@
+int a;
+int b;
+float c;
+
+a = 10;
+b = 3;
+c = a / b;
+
+printf(a);
+printf(b);
+printf(c);

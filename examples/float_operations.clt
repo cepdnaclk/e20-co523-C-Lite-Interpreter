@@ -1,0 +1,12 @@
+float x;
+float y;
+float result;
+
+x = 3.14;
+y = 2.86;
+
+result = x + y;
+printf(result);
+
+result = x * y;
+printf(result);

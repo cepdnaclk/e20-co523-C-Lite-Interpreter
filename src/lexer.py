@@ -67,7 +67,10 @@ class Lexer:
         return True
 
     def tokenize(self) -> Generator[Token, None, None]:
-        """Main generator loop. Yields tokens one by one."""
+        """
+        Main generator loop. Yields tokens one by one.
+        Includes max iteration guard to prevent infinite loops.
+        """
         max_iterations = self.length * 2 + 100
         iteration_count = 0
         
@@ -85,6 +88,11 @@ class Lexer:
                 self.advance()
                 continue
             
+            # Skip comments entirely
+            if self.current_char == '/' and self.peek() == '/':
+                self._scan_comment(self.line, self.column)  # Consume but don't yield
+                continue
+            
             # Record start location BEFORE consuming token
             start_line = self.line
             start_column = self.column
@@ -93,16 +101,13 @@ class Lexer:
             if self.current_char.isalpha() or self.current_char == '_':
                 yield self._scan_identifier(start_line, start_column)
             elif self.current_char.isdigit() or self.current_char == '.':
-                # Handle both digit and leading dot for floats
                 yield self._scan_number(start_line, start_column)
             elif self.current_char == '"':
                 yield self._scan_string(start_line, start_column)
             elif self.current_char == '/':
-                if self.peek() == '/':
-                    yield self._scan_comment(start_line, start_column)
-                else:
-                    self.advance()
-                    yield self._make_token(TokenType.SLASH, '/', start_line, start_column)
+                # Single slash (division operator)
+                self.advance()
+                yield self._make_token(TokenType.SLASH, '/', start_line, start_column)
             elif self.current_char == '=':
                 if self.peek() == '=':
                     self.advance()
@@ -274,13 +279,18 @@ class Lexer:
         return self._make_token(TokenType.STRING_LITERAL, value, line, column)
 
     def _scan_comment(self, line: int, column: int) -> Token:
-        """Scan single-line comments (//)."""
+        """
+        Scan single-line comments (//).
+        Theory: Matches //.* until newline or EOF.
+        """
         self.advance()  # Consume first /
         self.advance()  # Consume second /
         start_pos = self.position
         
+        # Consume all characters until newline or EOF
         while self.current_char is not None and self.current_char != '\n':
             self.advance()
         
+        # Extract comment text (for debugging, not used by parser)
         value = self.code[start_pos:self.position]
         return self._make_token(TokenType.COMMENT, value, line, column)

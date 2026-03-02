@@ -1,0 +1,9 @@
+int x;
+x = 5;
+
+if (x > 3) {
+    printf(x);
+} else {
+    x = 1;
+    printf(x);
+}

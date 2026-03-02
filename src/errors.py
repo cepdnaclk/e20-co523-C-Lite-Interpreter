@@ -12,6 +12,7 @@ class LexerError(CLiteError):
     Includes source location for precise error reporting.
     """
     def __init__(self, message: str, line: int, column: int):
+        self.message = message
         self.line = line
         self.column = column
         super().__init__(f"LexerError at line {line}, column {column}: {message}")
@@ -22,6 +23,7 @@ class ParserError(CLiteError):
     Includes source location for precise error reporting.
     """
     def __init__(self, message: str, line: int, column: int):
+        self.message = message
         self.line = line
         self.column = column
         super().__init__(f"ParserError at line {line}, column {column}: {message}")
@@ -32,6 +34,7 @@ class SemanticError(CLiteError):
     Includes source location for precise error reporting.
     """
     def __init__(self, message: str, line: int, column: int):
+        self.message = message
         self.line = line
         self.column = column
         super().__init__(f"SemanticError at line {line}, column {column}: {message}")
