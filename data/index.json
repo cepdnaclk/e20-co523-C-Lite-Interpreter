@@ -1,0 +1,13 @@
+{
+    "title": "C-Lite Interpreter",
+    "team": [
+    {
+        "name": "A.M.N.C Bandara",
+        "email": "e20032@eng.pdn.ac.lk",
+        "eNumber": "E/20/032"
+    }
+    ],
+    "tags": ["Programming Languages", "Compiler Design"],
+    "image":"cover_page.jpg",
+    "thumbnail":"thumbnail.jpg"
+}
