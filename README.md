@@ -55,6 +55,7 @@ Built from scratch in Python - lexer, parser, AST, symbol table, and evaluator -
 - [Performance](#performance)
 - [Contributing](#contributing)
 - [License](#license)
+  
 ---
 
 ## Overview
@@ -820,7 +821,9 @@ The test suite systematically covers the following categories:
 
 ## Design Decisions
 
-The project documents **18 design decisions** in [`docs/design_decisions.md`](docs/design_decisions.md). Key highlights:
+The project documents **18 design decisions** in [`docs/design_decisions.md`](docs/design_decisions.md). 
+
+Key highlights:
 
 | # | Decision | Choice | Rationale |
 |---|----------|--------|-----------|
