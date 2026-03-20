@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C-Lite Interpreter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0c10; --bg-elevated: #12151c; --bg-card: #181c25; --fg: #e4e8ef; --fg-muted: #6b7280;
+      --accent: #00d4aa; --accent-dim: rgba(0, 212, 170, 0.15); --border: #2a2f3a; --code-bg: #0d0f14;
+      --syntax-keyword: #ff7b72; --syntax-type: #79c0ff; --syntax-string: #a5d6ff; --syntax-number: #ffa657;
+      --syntax-comment: #6e7681; --syntax-function: #d2a8ff; --error: #f87171; --success: #4ade80;
+    }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .bg-grid { background-image: linear-gradient(rgba(0, 212, 170, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 170, 0.03) 1px, transparent 1px); background-size: 60px 60px; }
+    
+    /* Gradient Blobs - Static to prevent flickering */
+    .gradient-blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; pointer-events: none; }
+    
+    .text-gradient { background: linear-gradient(135deg, var(--accent) 0%, #00a3ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; transition: transform 0.3s ease, border-color 0.3s ease; }
+    .card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .code-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .code-header { background: var(--bg-elevated); padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .code-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .kw { color: var(--syntax-keyword); } .ty { color: var(--syntax-type); } .str { color: var(--syntax-string); } .num { color: var(--syntax-number); } .cmt { color: var(--syntax-comment); font-style: italic; } .fn { color: var(--syntax-function); }
+    .btn-primary { background: var(--accent); color: var(--bg); padding: 12px 28px; border-radius: 8px; font-weight: 600; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 212, 170, 0.3); }
+    .btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-secondary { background: transparent; color: var(--fg); padding: 12px 28px; border-radius: 8px; font-weight: 500; border: 1px solid var(--border); transition: all 0.2s ease; }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .nav-link { color: var(--fg-muted); transition: color 0.2s ease; position: relative; }
+    .nav-link:hover, .nav-link:focus { color: var(--accent); }
+    .nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: var(--accent); transition: width 0.2s ease; }
+    .nav-link:hover::after { width: 100%; }
+    .tab-btn { padding: 10px 20px; background: transparent; color: var(--fg-muted); border-radius: 6px; font-weight: 500; transition: all 0.2s ease; }
+    .tab-btn:hover { color: var(--fg); }
+    .tab-btn.active { background: var(--accent-dim); color: var(--accent); }
+    .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    
+    /* Hero Animations - CSS only to prevent pop-in flicker */
+    @keyframes heroFadeIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .hero-animate { animation: heroFadeIn 0.8s ease forwards; }
+    .hero-animate-delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .hero-animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
+
+    /* General Fade In for sections below fold */
+    .fade-in { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .stagger-1 { transition-delay: 0.1s; } .stagger-2 { transition-delay: 0.2s; } .stagger-3 { transition-delay: 0.3s; } .stagger-4 { transition-delay: 0.4s; }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+    .badge-success { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .badge-info { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-accent { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0, 212, 170, 0.3); }
+    .copy-btn { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--fg-muted); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease; }
+    .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--bg-elevated); font-weight: 600; }
+    tr:hover td { background: rgba(0, 212, 170, 0.05); }
+    
+    /* Terminal Styles */
+    .terminal { background: #0c0e12; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-family: 'JetBrains Mono', monospace; }
+    .terminal-header { background: linear-gradient(180deg, #1a1d24 0%, #14161b 100%); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .terminal-title { display: flex; align-items: center; gap: 8px; color: var(--fg-muted); font-size: 13px; }
+    .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .terminal-output { height: 400px; overflow-y: auto; padding: 16px; font-size: 14px; line-height: 1.6; }
+    .terminal-line { margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; }
+    .terminal-prompt { color: var(--accent); } .terminal-error { color: var(--error); } .terminal-success { color: var(--success); } .terminal-info { color: var(--syntax-type); }
+    .terminal-input-line { display: flex; align-items: center; background: var(--bg-elevated); border-top: 1px solid var(--border); padding: 12px 16px; }
+    .terminal-input { flex: 1; background: transparent; border: none; color: var(--fg); font-family: inherit; font-size: 14px; outline: none; caret-color: var(--fg); }
+    .terminal-input::placeholder { color: var(--fg-muted); }
+    
+    .pipeline-node { background: var(--bg-card); border: 2px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; transition: all 0.3s ease; }
+    .pipeline-node:hover { border-color: var(--accent); box-shadow: 0 0 30px rgba(0, 212, 170, 0.2); }
+    .pipeline-arrow { color: var(--accent); opacity: 0.6; }
+  </style>
+</head>
+<body class="bg-grid min-h-screen">
+  <!-- Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-[var(--bg)]/80 backdrop-blur-xl border-b border-[var(--border)]">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="#" class="font-mono text-xl font-bold text-gradient">C-Lite</a>
+      <div class="hidden md:flex items-center gap-8">
+        <a href="#demo" class="nav-link text-sm font-medium">Try It</a>
+        <a href="#features" class="nav-link text-sm font-medium">Features</a>
+        <a href="#language" class="nav-link text-sm font-medium">Language</a>
+        <a href="#architecture" class="nav-link text-sm font-medium">Architecture</a>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/ChethiyaB/C-Lite-Interpreter" target="_blank" rel="noopener" class="btn-secondary text-sm hidden sm:inline-flex" aria-label="View on GitHub">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/></svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <!-- Static blobs to prevent flickering -->
+    <div class="gradient-blob w-[600px] h-[600px] bg-[#00d4aa] top-[-200px] right-[-200px]"></div>
+    <div class="gradient-blob w-[400px] h-[400px] bg-[#0066ff] bottom-[-100px] left-[-100px]"></div>
+    
+    <div class="max-w-7xl mx-auto px-6 py-20 relative z-10">
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <!-- CSS Animation for smooth load -->
+        <div class="hero-animate">
+          <div class="flex flex-wrap gap-3 mb-6">
+            <span class="badge badge-success"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>v1.0</span>
+            <span class="badge badge-info">Python 3.8+</span>
+            <span class="badge badge-accent">MIT License</span>
+          </div>
+          
+          <h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+            <span class="font-mono text-gradient">C-Lite</span><br><span class="text-[var(--fg)]">Interpreter</span>
+          </h1>
+          
+          <p class="text-xl text-[var(--fg-muted)] mb-8 max-w-xl">
+            A tree-walking interpreter for a pedagogical subset of C. Built from scratch in Python with zero external runtime dependencies.
+          </p>
+          
+          <div class="flex flex-wrap gap-4">
+            <a href="#demo" class="btn-primary">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Try the REPL
+            </a>
+            <a href="#language" class="btn-secondary">Language Reference</a>
+          </div>
+        </div>
+        
+        <div class="hero-animate hero-animate-delay-1">
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dot bg-[#ff5f57]"></div><div class="code-dot bg-[#febc2e]"></div><div class="code-dot bg-[#28c840]"></div>
+              <span class="ml-4 text-sm text-[var(--fg-muted)] font-mono">hello.clt</span>
+            </div>
+            <pre class="p-6 font-mono text-sm leading-relaxed overflow-x-auto"><code><span class="cmt">// Declare variables</span>
+<span class="kw">int</span> x;
+<span class="kw">float</span> pi;
+
+<span class="cmt">// Assign values</span>
+x = <span class="num">42</span>;
+pi = <span class="num">3.14159</span>;
+
+<span class="cmt">// Control flow</span>
+<span class="kw">if</span> (x > <span class="num">10</span>) {
+    <span class="fn">printf</span>(x);
+} <span class="kw">else</span> {
+    <span class="fn">printf</span>(<span class="num">0</span>);
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive REPL Demo -->
+  <section id="demo" class="py-24 bg-[var(--bg-elevated)]">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12 fade-in">
+        <h2 class="text-4xl font-bold mb-4">Try C-Lite Now</h2>
+        <p class="text-[var(--fg-muted)] max-w-2xl mx-auto">Write and execute C-Lite code directly in your browser.</p>
+      </div>
+      
+      <div class="grid lg:grid-cols-3 gap-6 fade-in">
+        <div class="lg:col-span-2">
+          <div class="terminal" id="terminal-container">
+            <div class="terminal-header">
+              <div class="terminal-title">
+                <div class="terminal-dot bg-[#ff5f57]"></div><div class="terminal-dot bg-[#febc2e]"></div><div class="terminal-dot bg-[#28c840]"></div>
+                <span class="ml-2">C-Lite REPL</span>
+              </div>
+              <div class="flex gap-2">
+                <button id="clear-terminal" class="copy-btn">Clear</button>
+                <button id="reset-state" class="copy-btn">Reset</button>
+              </div>
+            </div>
+            <div class="terminal-output" id="terminal-output" aria-live="polite">
+              <div class="terminal-line terminal-info">C-Lite Interpreter v1.0 (JavaScript Simulation)</div>
+              <div class="terminal-line terminal-info">Type <span class="terminal-success">:help</span> for available commands</div>
+              <div class="terminal-line">&nbsp;</div>
+            </div>
+            <div class="terminal-input-line">
+              <span class="terminal-prompt mr-2">&gt;&gt;&gt;</span>
+              <input type="text" class="terminal-input" id="terminal-input" placeholder="Enter C-Lite code..." autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+        </div>
+        
+        <div class="card p-6 h-fit">
+          <h3 class="font-semibold mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Quick Reference
+          </h3>
+          <div class="space-y-4 text-sm">
+            <div>
+              <h4 class="font-medium text-[var(--fg-muted)] mb-2">Output</h4>
+              <code class="block bg-[var(--bg)] p-2 rounded font-mono text-xs"><span class="fn">printf</span>(x);<br><span class="fn">printf</span>(<span class="str">"hello"</span>);</code>
+            </div>
+          </div>
+          <div class="mt-6 pt-4 border-t border-[var(--border)]">
+            <h4 class="font-medium text-[var(--fg-muted)] mb-3 text-sm">Try These Examples</h4>
+            <div class="space-y-2">
+              <button class="example-btn w-full text-left p-2 bg-[var(--bg)] rounded text-xs font-mono hover:border-[var(--accent)] border border-transparent transition-colors" data-code="int x; x = 42; printf(x);">Variable & Output</button>
+              <button class="example-btn w-full text-left p-2 bg-[var(--bg)] rounded text-xs font-mono hover:border-[var(--accent)] border border-transparent transition-colors" data-code='printf("Hello World");'>String Output</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-24 relative">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16 fade-in">
+        <h2 class="text-4xl font-bold mb-4">Built for Learning</h2>
+        <p class="text-[var(--fg-muted)] max-w-2xl mx-auto">Every design decision documented. Every component transparent.</p>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="card p-6 fade-in stagger-1">
+          <div class="w-12 h-12 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Zero Dependencies</h3>
+          <p class="text-[var(--fg-muted)] text-sm">Only Python 3.8+ standard library.</p>
+        </div>
+        <div class="card p-6 fade-in stagger-2">
+          <div class="w-12 h-12 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">LL(1) Parser</h3>
+          <p class="text-[var(--fg-muted)] text-sm">Recursive-descent parsing with formal EBNF grammar.</p>
+        </div>
+        <div class="card p-6 fade-in stagger-3">
+          <div class="w-12 h-12 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Interactive REPL</h3>
+          <p class="text-[var(--fg-muted)] text-sm">Multi-line input, state inspection, and error recovery.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture Section -->
+  <section id="architecture" class="py-24 bg-[var(--bg-elevated)]">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16 fade-in">
+        <h2 class="text-4xl font-bold mb-4">Three-Phase Pipeline</h2>
+      </div>
+      <div class="flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-6 mb-16 fade-in">
+        <div class="pipeline-node w-full lg:w-64">
+          <div class="w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-3"><span class="font-mono font-bold text-[var(--accent)]">1</span></div>
+          <h3 class="font-semibold mb-1">Lexer</h3>
+        </div>
+        <div class="pipeline-arrow hidden lg:block"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></div>
+        <div class="pipeline-node w-full lg:w-64">
+          <div class="w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-3"><span class="font-mono font-bold text-[var(--accent)]">2</span></div>
+          <h3 class="font-semibold mb-1">Parser</h3>
+        </div>
+        <div class="pipeline-arrow hidden lg:block"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></div>
+        <div class="pipeline-node w-full lg:w-64">
+          <div class="w-10 h-10 rounded-lg bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-3"><span class="font-mono font-bold text-[var(--accent)]">3</span></div>
+          <h3 class="font-semibold mb-1">Interpreter</h3>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Language Reference -->
+  <section id="language" class="py-24">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16 fade-in">
+        <h2 class="text-4xl font-bold mb-4">Language Reference</h2>
+        <p class="text-[var(--fg-muted)]">A simplified, statically-typed subset of C</p>
+      </div>
+      
+      <div class="flex flex-wrap gap-2 mb-8 fade-in">
+        <button class="tab-btn active" data-tab="types" aria-selected="true">Data Types</button>
+        <button class="tab-btn" data-tab="operators" aria-selected="false">Operators</button>
+        <button class="tab-btn" data-tab="control" aria-selected="false">Control Flow</button>
+        <button class="tab-btn" data-tab="scoping" aria-selected="false">Scoping</button>
+      </div>
+      
+      <div id="tab-content" class="fade-in">
+        <!-- Data Types -->
+        <div id="types-content" class="tab-panel">
+          <div class="grid lg:grid-cols-2 gap-8">
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Supported Types</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>Type</th><th>Description</th><th>Examples</th></tr></thead>
+                  <tbody>
+                    <tr><td class="font-mono text-[var(--accent)]">int</td><td>Signed integer</td><td class="font-mono text-sm"><span class="num">0</span>, <span class="num">42</span>, <span class="num">1000</span></td></tr>
+                    <tr><td class="font-mono text-[var(--accent)]">float</td><td>IEEE 754 double-precision</td><td class="font-mono text-sm"><span class="num">3.14</span>, <span class="num">.5</span>, <span class="num">7.</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <h3 class="text-xl font-semibold mb-4 mt-8">Variable Declaration</h3>
+              <div class="code-block">
+                <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;          <span class="cmt">// declaration</span>
+x = <span class="num">42</span>;         <span class="cmt">// assignment</span>
+
+<span class="kw">float</span> pi;
+pi = <span class="num">3.14159</span>;</code></pre>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Type Coercion</h3>
+              <p class="text-[var(--fg-muted)] mb-4">Implicit type coercion follows C semantics:</p>
+              
+              <div class="code-block mb-6">
+                <pre class="p-4 font-mono text-sm"><code><span class="cmt">// int <- float: truncation</span>
+<span class="kw">int</span> x;
+x = <span class="num">3.14</span>;    <span class="cmt">// x == 3</span>
+
+<span class="cmt">// float <- int: promotion</span>
+<span class="kw">float</span> y;
+y = <span class="num">10</span>;      <span class="cmt">// y == 10.0</span>
+
+<span class="cmt">// Mixed arithmetic: promote to float</span>
+<span class="num">3</span> + <span class="num">2.5</span>       <span class="cmt">// -> 5.5</span></code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Operators -->
+        <div id="operators-content" class="tab-panel hidden">
+          <div class="grid lg:grid-cols-2 gap-8">
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Arithmetic Operators</h3>
+              <div class="table-wrapper mb-8">
+                <table>
+                  <thead><tr><th>Operator</th><th>Description</th><th>Example</th></tr></thead>
+                  <tbody>
+                    <tr><td class="font-mono">+</td><td>Addition</td><td class="font-mono"><span class="num">3</span> + <span class="num">4</span></td></tr>
+                    <tr><td class="font-mono">-</td><td>Subtraction</td><td class="font-mono"><span class="num">10</span> - <span class="num">3</span></td></tr>
+                    <tr><td class="font-mono">*</td><td>Multiplication</td><td class="font-mono"><span class="num">5</span> * <span class="num">2</span></td></tr>
+                    <tr><td class="font-mono">/</td><td>Division</td><td class="font-mono"><span class="num">7</span> / <span class="num">2</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-4">
+                <h4 class="font-semibold mb-2">Division Semantics</h4>
+                <ul class="text-sm text-[var(--fg-muted)] space-y-1">
+                  <li><code class="font-mono">int / int</code> → floor division: <code class="font-mono">7 / 2 = 3</code></li>
+                  <li><code class="font-mono">float / int</code> → float division: <code class="font-mono">7.0 / 2 = 3.5</code></li>
+                </ul>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Relational Operators</h3>
+              <div class="table-wrapper mb-8">
+                <table>
+                  <thead><tr><th>Operator</th><th>Description</th><th>Returns</th></tr></thead>
+                  <tbody>
+                    <tr><td class="font-mono">></td><td>Greater than</td><td><span class="num">1</span> or <span class="num">0</span></td></tr>
+                    <tr><td class="font-mono"><</td><td>Less than</td><td><span class="num">1</span> or <span class="num">0</span></td></tr>
+                    <tr><td class="font-mono">==</td><td>Equal to</td><td><span class="num">1</span> or <span class="num">0</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <h3 class="text-xl font-semibold mb-4">Operator Precedence</h3>
+              <div class="code-block">
+                <pre class="p-4 font-mono text-sm"><code><span class="num">1</span>  ( )              <span class="cmt">// Parentheses</span>
+<span class="num">2</span>  + - <span class="cmt">(unary)     // Unary positive/negation</span>
+<span class="num">3</span>  * /              <span class="cmt">// Multiplicative</span>
+<span class="num">4</span>  + - <span class="cmt">(binary)    // Additive</span>
+<span class="num">5</span>  > < ==            <span class="cmt">// Relational</span>
+<span class="num">6</span>  =                <span class="cmt">// Assignment</span></code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Control Flow -->
+        <div id="control-content" class="tab-panel hidden">
+          <div class="grid lg:grid-cols-2 gap-8">
+            <div>
+              <h3 class="text-xl font-semibold mb-4">If-Else Statement</h3>
+              <div class="code-block mb-6">
+                <pre class="p-4 font-mono text-sm"><code><span class="kw">if</span> (condition) {
+    <span class="cmt">// then-branch</span>
+} <span class="kw">else</span> {
+    <span class="cmt">// else-branch (optional)</span>
+}</code></pre>
+              </div>
+              
+              <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-4">
+                <h4 class="font-semibold mb-2">Truthiness Rules</h4>
+                <p class="text-sm text-[var(--fg-muted)]">Follows C semantics: <code class="font-mono">0</code> and <code class="font-mono">0.0</code> are false; all other values are true.</p>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="text-xl font-semibold mb-4">I/O: printf</h3>
+              <div class="code-block mb-6">
+                <pre class="p-4 font-mono text-sm"><code><span class="fn">printf</span>(<span class="num">42</span>);         <span class="cmt">// prints: 42</span>
+<span class="fn">printf</span>(<span class="num">3.14</span>);       <span class="cmt">// prints: 3.14</span>
+<span class="fn">printf</span>(x + y);      <span class="cmt">// prints computed sum</span></code></pre>
+              </div>
+              
+              <h3 class="text-xl font-semibold mb-4">Comments</h3>
+              <div class="code-block">
+                <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;   <span class="cmt">// this is a comment</span>
+x = <span class="num">42</span>;  <span class="cmt">// assign value</span></code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Scoping -->
+        <div id="scoping-content" class="tab-panel hidden">
+          <div class="grid lg:grid-cols-2 gap-8">
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Block Scoping</h3>
+              <p class="text-[var(--fg-muted)] mb-4">Blocks introduce new lexical scopes. Variables declared inside are destroyed when the block exits.</p>
+              
+              <div class="code-block">
+                <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;
+x = <span class="num">10</span>;
+
+{
+    <span class="kw">int</span> y;           <span class="cmt">// y exists only here</span>
+    y = <span class="num">20</span>;
+    <span class="kw">int</span> x;           <span class="cmt">// shadows outer x</span>
+    x = <span class="num">99</span>;
+    <span class="fn">printf</span>(x);       <span class="cmt">// prints: 99</span>
+}
+
+<span class="fn">printf</span>(x);           <span class="cmt">// prints: 10</span></code></pre>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Variable Shadowing</h3>
+              <p class="text-[var(--fg-muted)] mb-4">An inner scope may declare a variable with the same name as an outer scope.</p>
+              
+              <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <svg class="w-5 h-5 text-[var(--accent)] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                  <div>
+                    <h4 class="font-semibold mb-1">Stack-based Symbol Table</h4>
+                    <p class="text-sm text-[var(--fg-muted)]">Efficient scope enter/exit with O(d) lookup where d = nesting depth.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-16 border-t border-[var(--border)]">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+      <p class="text-sm text-[var(--fg-muted)]">MIT License.</p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // Token Types
+      const TokenType = {
+        INT: 'INT', FLOAT: 'FLOAT', IF: 'IF', ELSE: 'ELSE', PRINTF: 'PRINTF',
+        IDENTIFIER: 'IDENTIFIER', INT_LITERAL: 'INT_LITERAL', FLOAT_LITERAL: 'FLOAT_LITERAL', STRING_LITERAL: 'STRING_LITERAL',
+        PLUS: 'PLUS', MINUS: 'MINUS', STAR: 'STAR', SLASH: 'SLASH',
+        GT: 'GT', LT: 'LT', EQ: 'EQ', ASSIGN: 'ASSIGN',
+        LPAREN: 'LPAREN', RPAREN: 'RPAREN', LBRACE: 'LBRACE', RBRACE: 'RBRACE', SEMI: 'SEMI', EOF: 'EOF'
+      };
+
+      const KEYWORDS = { 'int': TokenType.INT, 'float': TokenType.FLOAT, 'if': TokenType.IF, 'else': TokenType.ELSE, 'printf': TokenType.PRINTF };
+
+      class Token {
+        constructor(type, value, line, column) { this.type = type; this.value = value; this.line = line; this.column = column; }
+      }
+
+      // Lexer
+      class Lexer {
+        constructor(source) { this.source = source; this.pos = 0; this.line = 1; this.column = 1; }
+        peek() { return this.pos >= this.source.length ? null : this.source[this.pos]; }
+        advance() {
+          const ch = this.source[this.pos++];
+          if (ch === '\n') { this.line++; this.column = 1; } else { this.column++; }
+          return ch;
+        }
+        skipWhitespace() { while (this.peek() && /\s/.test(this.peek())) this.advance(); }
+        skipComment() {
+          if (this.peek() === '/' && this.source[this.pos + 1] === '/') {
+            while (this.peek() && this.peek() !== '\n') this.advance();
+            return true;
+          }
+          return false;
+        }
+        readNumber() {
+          const startLine = this.line, startCol = this.column;
+          let num = '', isFloat = false;
+          while (this.peek() && (/\d/.test(this.peek()) || this.peek() === '.')) {
+            if (this.peek() === '.') { if (isFloat) break; isFloat = true; }
+            num += this.advance();
+          }
+          if (num.endsWith('.')) isFloat = true;
+          if (num.startsWith('.')) { num = '0' + num; isFloat = true; }
+          const value = isFloat ? parseFloat(num) : parseInt(num, 10);
+          return new Token(isFloat ? TokenType.FLOAT_LITERAL : TokenType.INT_LITERAL, value, startLine, startCol);
+        }
+        readString() {
+          const startLine = this.line, startCol = this.column;
+          this.advance(); // skip opening quote
+          let str = '';
+          while (this.peek() && this.peek() !== '"') {
+            if (this.peek() === '\\') {
+              this.advance();
+              const escaped = this.advance();
+              if (escaped === 'n') str += '\n'; else if (escaped === 't') str += '\t'; else str += escaped;
+            } else str += this.advance();
+          }
+          if (!this.peek()) throw new Error(`LexerError at line ${startLine}, column ${startCol}: Unterminated string`);
+          this.advance(); // skip closing quote
+          return new Token(TokenType.STRING_LITERAL, str, startLine, startCol);
+        }
+        readIdentifier() {
+          const startLine = this.line, startCol = this.column;
+          let id = '';
+          while (this.peek() && /[a-zA-Z0-9_]/.test(this.peek())) id += this.advance();
+          return new Token(KEYWORDS[id] || TokenType.IDENTIFIER, id, startLine, startCol);
+        }
+        tokenize() {
+          const tokens = [];
+          while (this.pos < this.source.length) {
+            this.skipWhitespace(); if (this.skipComment()) continue; this.skipWhitespace();
+            if (this.pos >= this.source.length) break;
+            const ch = this.peek();
+            const startLine = this.line, startCol = this.column;
+            if (/\d/.test(ch) || (ch === '.' && /\d/.test(this.source[this.pos + 1] || ''))) tokens.push(this.readNumber());
+            else if (ch === '"') tokens.push(this.readString());
+            else if (/[a-zA-Z_]/.test(ch)) tokens.push(this.readIdentifier());
+            else if (ch === '+') { this.advance(); tokens.push(new Token(TokenType.PLUS, '+', startLine, startCol)); }
+            else if (ch === '-') { this.advance(); tokens.push(new Token(TokenType.MINUS, '-', startLine, startCol)); }
+            else if (ch === '*') { this.advance(); tokens.push(new Token(TokenType.STAR, '*', startLine, startCol)); }
+            else if (ch === '/') { this.advance(); tokens.push(new Token(TokenType.SLASH, '/', startLine, startCol)); }
+            else if (ch === '>') { this.advance(); tokens.push(new Token(TokenType.GT, '>', startLine, startCol)); }
+            else if (ch === '<') { this.advance(); tokens.push(new Token(TokenType.LT, '<', startLine, startCol)); }
+            else if (ch === '=' && this.source[this.pos + 1] === '=') { this.advance(); this.advance(); tokens.push(new Token(TokenType.EQ, '==', startLine, startCol)); }
+            else if (ch === '=') { this.advance(); tokens.push(new Token(TokenType.ASSIGN, '=', startLine, startCol)); }
+            else if (ch === '(') { this.advance(); tokens.push(new Token(TokenType.LPAREN, '(', startLine, startCol)); }
+            else if (ch === ')') { this.advance(); tokens.push(new Token(TokenType.RPAREN, ')', startLine, startCol)); }
+            else if (ch === '{') { this.advance(); tokens.push(new Token(TokenType.LBRACE, '{', startLine, startCol)); }
+            else if (ch === '}') { this.advance(); tokens.push(new Token(TokenType.RBRACE, '}', startLine, startCol)); }
+            else if (ch === ';') { this.advance(); tokens.push(new Token(TokenType.SEMI, ';', startLine, startCol)); }
+            else { this.advance(); throw new Error(`LexerError at line ${startLine}, column ${startCol}: Unexpected character '${ch}'`); }
+          }
+          tokens.push(new Token(TokenType.EOF, null, this.line, this.column));
+          return tokens;
+        }
+      }
+
+      // AST Nodes
+      class ASTNode {}
+      class Program extends ASTNode { constructor(statements) { super(); this.statements = statements; } }
+      class Declaration extends ASTNode { constructor(name, type, line, col) { super(); this.name = name; this.varType = type; this.line = line; this.col = col; } }
+      class Assignment extends ASTNode { constructor(name, value, line, col) { super(); this.name = name; this.value = value; this.line = line; this.col = col; } }
+      class IfStatement extends ASTNode { constructor(condition, thenBranch, elseBranch, line, col) { super(); this.condition = condition; this.thenBranch = thenBranch; this.elseBranch = elseBranch; this.line = line; this.col = col; } }
+      class Block extends ASTNode { constructor(statements, line, col) { super(); this.statements = statements; this.line = line; this.col = col; } }
+      class PrintfCall extends ASTNode { constructor(expression, line, col) { super(); this.expression = expression; this.line = line; this.col = col; } }
+      class BinaryOp extends ASTNode { constructor(left, op, right, line, col) { super(); this.left = left; this.op = op; this.right = right; this.line = line; this.col = col; } }
+      class UnaryOp extends ASTNode { constructor(op, operand, line, col) { super(); this.op = op; this.operand = operand; this.line = line; this.col = col; } }
+      class NumberLiteral extends ASTNode { constructor(value, line, col) { super(); this.value = value; this.line = line; this.col = col; } }
+      class StringLiteral extends ASTNode { constructor(value, line, col) { super(); this.value = value; this.line = line; this.col = col; } }
+      class Identifier extends ASTNode { constructor(name, line, col) { super(); this.name = name; this.line = line; this.col = col; } }
+
+      // Parser
+      class Parser {
+        constructor(tokens) { this.tokens = tokens; this.pos = 0; }
+        current() { return this.tokens[this.pos]; }
+        advance() { return this.tokens[this.pos++]; }
+        expect(type, message) {
+          const token = this.current();
+          if (!token || token.type !== type) throw new Error(`ParserError at line ${token ? token.line : 'EOF'}, column ${token ? token.column : 0}: ${message}`);
+          return this.advance();
+        }
+        parse() {
+          const statements = [];
+          while (this.current() && this.current().type !== TokenType.EOF) { const stmt = this.parseStatement(); if (stmt) statements.push(stmt); }
+          return new Program(statements);
+        }
+        parseStatement() {
+          const token = this.current();
+          if (token.type === TokenType.INT || token.type === TokenType.FLOAT) return this.parseDeclaration();
+          if (token.type === TokenType.IF) return this.parseIfStatement();
+          if (token.type === TokenType.LBRACE) return this.parseBlock();
+          if (token.type === TokenType.PRINTF) return this.parsePrintf();
+          if (token.type === TokenType.IDENTIFIER) return this.parseAssignment();
+          if (token.type === TokenType.SEMI) { this.advance(); return null; }
+          throw new Error(`ParserError at line ${token.line}, column ${token.column}: Unexpected token '${token.value}'`);
+        }
+        parseDeclaration() {
+          const typeToken = this.advance();
+          const nameToken = this.expect(TokenType.IDENTIFIER, "Expected identifier after type");
+          this.expect(TokenType.SEMI, "Expected ';' after declaration");
+          return new Declaration(nameToken.value, typeToken.value, typeToken.line, typeToken.column);
+        }
+        parseAssignment() {
+          const nameToken = this.advance();
+          this.expect(TokenType.ASSIGN, "Expected '=' in assignment");
+          const value = this.parseExpression();
+          this.expect(TokenType.SEMI, "Expected ';' after assignment");
+          return new Assignment(nameToken.value, value, nameToken.line, nameToken.column);
+        }
+        parseIfStatement() {
+          const ifToken = this.advance();
+          this.expect(TokenType.LPAREN, "Expected '(' after 'if'");
+          const condition = this.parseExpression();
+          this.expect(TokenType.RPAREN, "Expected ')' after condition");
+          const thenBranch = this.parseStatement();
+          let elseBranch = null;
+          if (this.current() && this.current().type === TokenType.ELSE) { this.advance(); elseBranch = this.parseStatement(); }
+          return new IfStatement(condition, thenBranch, elseBranch, ifToken.line, ifToken.column);
+        }
+        parseBlock() {
+          const lbrace = this.advance();
+          const statements = [];
+          while (this.current() && this.current().type !== TokenType.RBRACE && this.current().type !== TokenType.EOF) { const stmt = this.parseStatement(); if (stmt) statements.push(stmt); }
+          this.expect(TokenType.RBRACE, "Expected '}' to close block");
+          return new Block(statements, lbrace.line, lbrace.column);
+        }
+        parsePrintf() {
+          const printfToken = this.advance();
+          this.expect(TokenType.LPAREN, "Expected '(' after 'printf'");
+          const expr = this.parseExpression();
+          this.expect(TokenType.RPAREN, "Expected ')' after printf argument");
+          this.expect(TokenType.SEMI, "Expected ';' after printf call");
+          return new PrintfCall(expr, printfToken.line, printfToken.column);
+        }
+        parseExpression() { return this.parseRelational(); }
+        parseRelational() {
+          let left = this.parseAdditive();
+          while (this.current() && (this.current().type === TokenType.GT || this.current().type === TokenType.LT || this.current().type === TokenType.EQ)) {
+            const op = this.advance(); const right = this.parseAdditive(); left = new BinaryOp(left, op.value, right, op.line, op.column);
+          }
+          return left;
+        }
+        parseAdditive() {
+          let left = this.parseMultiplicative();
+          while (this.current() && (this.current().type === TokenType.PLUS || this.current().type === TokenType.MINUS)) {
+            const op = this.advance(); const right = this.parseMultiplicative(); left = new BinaryOp(left, op.value, right, op.line, op.column);
+          }
+          return left;
+        }
+        parseMultiplicative() {
+          let left = this.parseUnary();
+          while (this.current() && (this.current().type === TokenType.STAR || this.current().type === TokenType.SLASH)) {
+            const op = this.advance(); const right = this.parseUnary(); left = new BinaryOp(left, op.value, right, op.line, op.column);
+          }
+          return left;
+        }
+        parseUnary() {
+          if (this.current() && (this.current().type === TokenType.PLUS || this.current().type === TokenType.MINUS)) {
+            const op = this.advance(); const operand = this.parseUnary(); return new UnaryOp(op.value, operand, op.line, op.column);
+          }
+          return this.parsePrimary();
+        }
+        parsePrimary() {
+          const token = this.current();
+          if (token.type === TokenType.INT_LITERAL || token.type === TokenType.FLOAT_LITERAL) { this.advance(); return new NumberLiteral(token.value, token.line, token.column); }
+          if (token.type === TokenType.STRING_LITERAL) { this.advance(); return new StringLiteral(token.value, token.line, token.column); }
+          if (token.type === TokenType.IDENTIFIER) { this.advance(); return new Identifier(token.value, token.line, token.column); }
+          if (token.type === TokenType.LPAREN) { this.advance(); const expr = this.parseExpression(); this.expect(TokenType.RPAREN, "Expected ')' after expression"); return expr; }
+          throw new Error(`ParserError at line ${token.line}, column ${token.column}: Unexpected token '${token.value}'`);
+        }
+      }
+
+      // Symbol & SymbolTable
+      class Symbol { constructor(name, type, value, initialized) { this.name = name; this.varType = type; this.value = value; this.initialized = initialized || false; } }
+      class SymbolTable {
+        constructor() { this.scopes = [{}]; }
+        pushScope() { this.scopes.push({}); }
+        popScope() { this.scopes.pop(); }
+        declare(name, type) { const scope = this.scopes[this.scopes.length - 1]; if (scope[name] !== undefined) throw new Error(`SemanticError: Variable '${name}' already declared`); scope[name] = new Symbol(name, type, null, false); }
+        assign(name, value) { for (let i = this.scopes.length - 1; i >= 0; i--) { if (this.scopes[i][name] !== undefined) { const sym = this.scopes[i][name]; if (sym.varType === 'int' && typeof value === 'number') value = Math.trunc(value); sym.value = value; sym.initialized = true; return; } } throw new Error(`SemanticError: Undefined variable '${name}'`); }
+        get(name) { const sym = this.lookup(name); if (!sym.initialized) throw new Error(`SemanticError: Variable '${name}' used before initialization`); return sym.value; }
+        lookup(name) { for (let i = this.scopes.length - 1; i >= 0; i--) { if (this.scopes[i][name] !== undefined) return this.scopes[i][name]; } throw new Error(`SemanticError: Undefined variable '${name}'`); }
+        getAllVariables() { const vars = []; this.scopes.forEach((scope, idx) => { Object.values(scope).forEach(sym => { vars.push({ scope: idx, name: sym.name, type: sym.varType, value: sym.value, initialized: sym.initialized }); }); }); return vars; }
+      }
+
+      // Interpreter
+      class Interpreter {
+        constructor() { this.symbolTable = new SymbolTable(); this.output = []; }
+        interpret(program) { this.output = []; program.statements.forEach(stmt => { if (stmt) this.execute(stmt); }); return this.output; }
+        execute(node) {
+          if (node instanceof Declaration) this.symbolTable.declare(node.name, node.varType);
+          else if (node instanceof Assignment) { const value = this.evaluate(node.value); this.symbolTable.assign(node.name, value); }
+          else if (node instanceof IfStatement) { const cond = this.evaluate(node.condition); if (this.isTruthy(cond)) { if (node.thenBranch) this.execute(node.thenBranch); } else { if (node.elseBranch) this.execute(node.elseBranch); } }
+          else if (node instanceof Block) { this.symbolTable.pushScope(); try { node.statements.forEach(stmt => { if (stmt) this.execute(stmt); }); } finally { this.symbolTable.popScope(); } }
+          else if (node instanceof PrintfCall) { const value = this.evaluate(node.expression); let str; if (typeof value === 'string') str = value; else if (typeof value === 'number') str = (Math.abs(value % 1) < 1e-9) ? value.toFixed(0) : value.toString(); else str = String(value); this.output.push(str); }
+        }
+        evaluate(node) {
+          if (node instanceof NumberLiteral) return node.value; if (node instanceof StringLiteral) return node.value; if (node instanceof Identifier) return this.symbolTable.get(node.name);
+          if (node instanceof UnaryOp) { const operand = this.evaluate(node.operand); if (node.op === '+') return +operand; if (node.op === '-') return -operand; }
+          if (node instanceof BinaryOp) { const left = this.evaluate(node.left); const right = this.evaluate(node.right); switch (node.op) { case '+': return left + right; case '-': return left - right; case '*': return left * right; case '/': if (Math.abs(right) < 1e-10) throw new Error('SemanticError: Division by zero'); if (Number.isInteger(left) && Number.isInteger(right)) return Math.floor(left / right); return left / right; case '>': return left > right ? 1 : 0; case '<': return left < right ? 1 : 0; case '==': return left === right ? 1 : 0; } }
+          throw new Error(`Unknown node type: ${node.constructor.name}`);
+        }
+        isTruthy(value) { return value !== 0 && value !== 0.0; }
+      }
+
+      // Terminal Interface
+      const terminalOutput = document.getElementById('terminal-output');
+      const terminalInput = document.getElementById('terminal-input');
+      const clearBtn = document.getElementById('clear-terminal');
+      const resetBtn = document.getElementById('reset-state');
+      let interpreter = new Interpreter(); let history = []; let historyIndex = -1;
+      function appendLine(text, className) { const line = document.createElement('div'); line.className = 'terminal-line ' + (className || ''); line.textContent = text; terminalOutput.appendChild(line); terminalOutput.scrollTop = terminalOutput.scrollHeight; }
+      function executeCode(code) { code = code.trim(); if (!code) return; history.push(code); historyIndex = history.length; appendLine('>>> ' + code, ''); if (code.startsWith(':')) { handleCommand(code); return; } try { const lexer = new Lexer(code); const tokens = lexer.tokenize(); const parser = new Parser(tokens); const ast = parser.parse(); const output = interpreter.interpret(ast); output.forEach(line => appendLine(line, 'terminal-success')); } catch (e) { appendLine(e.message, 'terminal-error'); } }
+      function handleCommand(cmd) { const parts = cmd.toLowerCase().split(/\s+/); const command = parts[0]; if (command === ':help') { appendLine('Commands: :help, :vars, :clear', 'terminal-info'); } else if (command === ':vars') { const vars = interpreter.symbolTable.getAllVariables(); if (vars.length === 0) appendLine('No variables.', 'terminal-info'); else vars.forEach(v => appendLine(`  ${v.name} (${v.type}) = ${v.initialized ? v.value : 'uninit'}`, '')); } else if (command === ':clear' || command === ':reset') { interpreter = new Interpreter(); appendLine('State reset.', 'terminal-success'); } }
+      terminalInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { executeCode(this.value); this.value = ''; } else if (e.key === 'ArrowUp') { e.preventDefault(); if (historyIndex > 0) this.value = history[--historyIndex]; } else if (e.key === 'ArrowDown') { e.preventDefault(); if (historyIndex < history.length - 1) this.value = history[++historyIndex]; else { historyIndex = history.length; this.value = ''; } } });
+      clearBtn.addEventListener('click', function() { terminalOutput.innerHTML = '<div class="terminal-line terminal-info">C-Lite Interpreter v1.0</div><div class="terminal-line">&nbsp;</div>'; });
+      resetBtn.addEventListener('click', function() { interpreter = new Interpreter(); appendLine('State reset.', 'terminal-success'); });
+      document.querySelectorAll('.example-btn').forEach(function(btn) { btn.addEventListener('click', function() { terminalInput.value = this.getAttribute('data-code'); terminalInput.focus(); }); });
+      document.getElementById('terminal-container').addEventListener('click', function() { terminalInput.focus(); });
+    })();
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      const observer = new IntersectionObserver(function(entries) { entries.forEach(function(entry) { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } }); }, { threshold: 0.1 });
+      document.querySelectorAll('.fade-in').forEach(function(el) { observer.observe(el); });
+      const tabButtons = document.querySelectorAll('.tab-btn'); const tabPanels = document.querySelectorAll('.tab-panel');
+      tabButtons.forEach(function(btn) { btn.addEventListener('click', function() { const tabId = this.getAttribute('data-tab'); tabButtons.forEach(function(b) { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); }); this.classList.add('active'); this.setAttribute('aria-selected', 'true'); tabPanels.forEach(function(panel) { panel.classList.add('hidden'); }); var targetPanel = document.getElementById(tabId + '-content'); if (targetPanel) { targetPanel.classList.remove('hidden'); } }); });
+    });
+  </script>
+</body>
+</html>
