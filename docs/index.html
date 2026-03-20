@@ -21,12 +21,32 @@
       html { scroll-behavior: auto; }
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     }
-    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; overflow-x: hidden; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
-    .bg-grid { background-image: linear-gradient(rgba(0, 212, 170, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 170, 0.03) 1px, transparent 1px); background-size: 60px 60px; }
     
-    /* Gradient Blobs - Static to prevent flickering */
-    .gradient-blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; pointer-events: none; }
+    .bg-grid { 
+      background-image: linear-gradient(rgba(0, 212, 170, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 170, 0.03) 1px, transparent 1px); 
+      background-size: 60px 60px; 
+    }
+    
+    /* Fixed Blobs - Visible across all sections */
+    .gradient-blob { 
+      position: fixed; 
+      border-radius: 50%; 
+      filter: blur(100px); 
+      opacity: 0.4; 
+      pointer-events: none; 
+      z-index: 0;
+    }
+
+    /* Semi-transparent sections to let blobs show through */
+    .section-glass {
+      background: rgba(18, 21, 28, 0.7); /* Semi-transparent elevated bg */
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 1;
+    }
     
     .text-gradient { background: linear-gradient(135deg, var(--accent) 0%, #00a3ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; transition: transform 0.3s ease, border-color 0.3s ease; }
@@ -49,16 +69,15 @@
     .tab-btn.active { background: var(--accent-dim); color: var(--accent); }
     .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     
-    /* Hero Animations - CSS only to prevent pop-in flicker */
+    /* Hero Animations */
     @keyframes heroFadeIn {
       0% { opacity: 0; transform: translateY(20px); }
       100% { opacity: 1; transform: translateY(0); }
     }
     .hero-animate { animation: heroFadeIn 0.8s ease forwards; }
     .hero-animate-delay-1 { animation-delay: 0.1s; opacity: 0; }
-    .hero-animate-delay-2 { animation-delay: 0.2s; opacity: 0; }
 
-    /* General Fade In for sections below fold */
+    /* General Fade In */
     .fade-in { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
     .fade-in.visible { opacity: 1; transform: translateY(0); }
     .stagger-1 { transition-delay: 0.1s; } .stagger-2 { transition-delay: 0.2s; } .stagger-3 { transition-delay: 0.3s; } .stagger-4 { transition-delay: 0.4s; }
@@ -72,7 +91,7 @@
     .table-wrapper { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: var(--bg-elevated); font-weight: 600; }
+    th { background: rgba(18, 21, 28, 0.8); font-weight: 600; }
     tr:hover td { background: rgba(0, 212, 170, 0.05); }
     
     /* Terminal Styles */
@@ -93,6 +112,11 @@
   </style>
 </head>
 <body class="bg-grid min-h-screen">
+  
+  <!-- Fixed Background Blobs (Moved to body for global visibility) -->
+  <div class="gradient-blob w-[600px] h-[600px] bg-[#00d4aa] top-[-200px] right-[-200px]"></div>
+  <div class="gradient-blob w-[400px] h-[400px] bg-[#0066ff] bottom-[-100px] left-[-100px]"></div>
+
   <!-- Navigation -->
   <nav class="fixed top-0 left-0 right-0 z-50 bg-[var(--bg)]/80 backdrop-blur-xl border-b border-[var(--border)]">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -113,14 +137,9 @@
   </nav>
 
   <!-- Hero Section -->
-  <header class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-    <!-- Static blobs to prevent flickering -->
-    <div class="gradient-blob w-[600px] h-[600px] bg-[#00d4aa] top-[-200px] right-[-200px]"></div>
-    <div class="gradient-blob w-[400px] h-[400px] bg-[#0066ff] bottom-[-100px] left-[-100px]"></div>
-    
+  <header class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 z-10">
     <div class="max-w-7xl mx-auto px-6 py-20 relative z-10">
       <div class="grid lg:grid-cols-2 gap-16 items-center">
-        <!-- CSS Animation for smooth load -->
         <div class="hero-animate">
           <div class="flex flex-wrap gap-3 mb-6">
             <span class="badge badge-success"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>v1.0</span>
@@ -172,7 +191,7 @@ pi = <span class="num">3.14159</span>;
   </header>
 
   <!-- Interactive REPL Demo -->
-  <section id="demo" class="py-24 bg-[var(--bg-elevated)]">
+  <section id="demo" class="py-24 section-glass">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-12 fade-in">
         <h2 class="text-4xl font-bold mb-4">Try C-Lite Now</h2>
@@ -228,7 +247,7 @@ pi = <span class="num">3.14159</span>;
   </section>
 
   <!-- Features Section -->
-  <section id="features" class="py-24 relative">
+  <section id="features" class="py-24 relative z-10">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-16 fade-in">
         <h2 class="text-4xl font-bold mb-4">Built for Learning</h2>
@@ -261,7 +280,7 @@ pi = <span class="num">3.14159</span>;
   </section>
 
   <!-- Architecture Section -->
-  <section id="architecture" class="py-24 bg-[var(--bg-elevated)]">
+  <section id="architecture" class="py-24 section-glass">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-16 fade-in">
         <h2 class="text-4xl font-bold mb-4">Three-Phase Pipeline</h2>
@@ -286,7 +305,7 @@ pi = <span class="num">3.14159</span>;
   </section>
 
   <!-- Language Reference -->
-  <section id="language" class="py-24">
+  <section id="language" class="py-24 relative z-10">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-16 fade-in">
         <h2 class="text-4xl font-bold mb-4">Language Reference</h2>
@@ -306,42 +325,22 @@ pi = <span class="num">3.14159</span>;
           <div class="grid lg:grid-cols-2 gap-8">
             <div>
               <h3 class="text-xl font-semibold mb-4">Supported Types</h3>
-              <div class="table-wrapper">
+              <div class="table-wrapper card p-0">
                 <table>
                   <thead><tr><th>Type</th><th>Description</th><th>Examples</th></tr></thead>
                   <tbody>
-                    <tr><td class="font-mono text-[var(--accent)]">int</td><td>Signed integer</td><td class="font-mono text-sm"><span class="num">0</span>, <span class="num">42</span>, <span class="num">1000</span></td></tr>
-                    <tr><td class="font-mono text-[var(--accent)]">float</td><td>IEEE 754 double-precision</td><td class="font-mono text-sm"><span class="num">3.14</span>, <span class="num">.5</span>, <span class="num">7.</span></td></tr>
+                    <tr><td class="font-mono text-[var(--accent)]">int</td><td>Signed integer</td><td class="font-mono text-sm"><span class="num">0</span>, <span class="num">42</span></td></tr>
+                    <tr><td class="font-mono text-[var(--accent)]">float</td><td>IEEE 754 double-precision</td><td class="font-mono text-sm"><span class="num">3.14</span>, <span class="num">.5</span></td></tr>
                   </tbody>
                 </table>
               </div>
-              
-              <h3 class="text-xl font-semibold mb-4 mt-8">Variable Declaration</h3>
-              <div class="code-block">
-                <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;          <span class="cmt">// declaration</span>
-x = <span class="num">42</span>;         <span class="cmt">// assignment</span>
-
-<span class="kw">float</span> pi;
-pi = <span class="num">3.14159</span>;</code></pre>
-              </div>
             </div>
-            
             <div>
-              <h3 class="text-xl font-semibold mb-4">Type Coercion</h3>
-              <p class="text-[var(--fg-muted)] mb-4">Implicit type coercion follows C semantics:</p>
-              
-              <div class="code-block mb-6">
-                <pre class="p-4 font-mono text-sm"><code><span class="cmt">// int <- float: truncation</span>
-<span class="kw">int</span> x;
-x = <span class="num">3.14</span>;    <span class="cmt">// x == 3</span>
-
-<span class="cmt">// float <- int: promotion</span>
-<span class="kw">float</span> y;
-y = <span class="num">10</span>;      <span class="cmt">// y == 10.0</span>
-
-<span class="cmt">// Mixed arithmetic: promote to float</span>
-<span class="num">3</span> + <span class="num">2.5</span>       <span class="cmt">// -> 5.5</span></code></pre>
-              </div>
+               <h3 class="text-xl font-semibold mb-4">Declaration</h3>
+               <div class="code-block">
+                 <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;      <span class="cmt">// declaration</span>
+x = <span class="num">42</span>;     <span class="cmt">// assignment</span></code></pre>
+               </div>
             </div>
           </div>
         </div>
@@ -351,48 +350,16 @@ y = <span class="num">10</span>;      <span class="cmt">// y == 10.0</span>
           <div class="grid lg:grid-cols-2 gap-8">
             <div>
               <h3 class="text-xl font-semibold mb-4">Arithmetic Operators</h3>
-              <div class="table-wrapper mb-8">
+              <div class="table-wrapper card p-0">
                 <table>
-                  <thead><tr><th>Operator</th><th>Description</th><th>Example</th></tr></thead>
+                  <thead><tr><th>Op</th><th>Desc</th><th>Example</th></tr></thead>
                   <tbody>
-                    <tr><td class="font-mono">+</td><td>Addition</td><td class="font-mono"><span class="num">3</span> + <span class="num">4</span></td></tr>
-                    <tr><td class="font-mono">-</td><td>Subtraction</td><td class="font-mono"><span class="num">10</span> - <span class="num">3</span></td></tr>
-                    <tr><td class="font-mono">*</td><td>Multiplication</td><td class="font-mono"><span class="num">5</span> * <span class="num">2</span></td></tr>
-                    <tr><td class="font-mono">/</td><td>Division</td><td class="font-mono"><span class="num">7</span> / <span class="num">2</span></td></tr>
+                    <tr><td class="font-mono">+</td><td>Add</td><td class="font-mono"><span class="num">3</span> + <span class="num">4</span></td></tr>
+                    <tr><td class="font-mono">-</td><td>Sub</td><td class="font-mono"><span class="num">10</span> - <span class="num">3</span></td></tr>
+                    <tr><td class="font-mono">*</td><td>Mul</td><td class="font-mono"><span class="num">5</span> * <span class="num">2</span></td></tr>
+                    <tr><td class="font-mono">/</td><td>Div</td><td class="font-mono"><span class="num">7</span> / <span class="num">2</span></td></tr>
                   </tbody>
                 </table>
-              </div>
-              
-              <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-4">
-                <h4 class="font-semibold mb-2">Division Semantics</h4>
-                <ul class="text-sm text-[var(--fg-muted)] space-y-1">
-                  <li><code class="font-mono">int / int</code> → floor division: <code class="font-mono">7 / 2 = 3</code></li>
-                  <li><code class="font-mono">float / int</code> → float division: <code class="font-mono">7.0 / 2 = 3.5</code></li>
-                </ul>
-              </div>
-            </div>
-            
-            <div>
-              <h3 class="text-xl font-semibold mb-4">Relational Operators</h3>
-              <div class="table-wrapper mb-8">
-                <table>
-                  <thead><tr><th>Operator</th><th>Description</th><th>Returns</th></tr></thead>
-                  <tbody>
-                    <tr><td class="font-mono">></td><td>Greater than</td><td><span class="num">1</span> or <span class="num">0</span></td></tr>
-                    <tr><td class="font-mono"><</td><td>Less than</td><td><span class="num">1</span> or <span class="num">0</span></td></tr>
-                    <tr><td class="font-mono">==</td><td>Equal to</td><td><span class="num">1</span> or <span class="num">0</span></td></tr>
-                  </tbody>
-                </table>
-              </div>
-              
-              <h3 class="text-xl font-semibold mb-4">Operator Precedence</h3>
-              <div class="code-block">
-                <pre class="p-4 font-mono text-sm"><code><span class="num">1</span>  ( )              <span class="cmt">// Parentheses</span>
-<span class="num">2</span>  + - <span class="cmt">(unary)     // Unary positive/negation</span>
-<span class="num">3</span>  * /              <span class="cmt">// Multiplicative</span>
-<span class="num">4</span>  + - <span class="cmt">(binary)    // Additive</span>
-<span class="num">5</span>  > < ==            <span class="cmt">// Relational</span>
-<span class="num">6</span>  =                <span class="cmt">// Assignment</span></code></pre>
               </div>
             </div>
           </div>
@@ -400,77 +367,26 @@ y = <span class="num">10</span>;      <span class="cmt">// y == 10.0</span>
         
         <!-- Control Flow -->
         <div id="control-content" class="tab-panel hidden">
-          <div class="grid lg:grid-cols-2 gap-8">
-            <div>
-              <h3 class="text-xl font-semibold mb-4">If-Else Statement</h3>
-              <div class="code-block mb-6">
-                <pre class="p-4 font-mono text-sm"><code><span class="kw">if</span> (condition) {
-    <span class="cmt">// then-branch</span>
+          <div class="code-block max-w-2xl">
+            <pre class="p-4 font-mono text-sm"><code><span class="kw">if</span> (x > <span class="num">10</span>) {
+    <span class="fn">printf</span>(x);
 } <span class="kw">else</span> {
-    <span class="cmt">// else-branch (optional)</span>
+    <span class="fn">printf</span>(<span class="num">0</span>);
 }</code></pre>
-              </div>
-              
-              <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-4">
-                <h4 class="font-semibold mb-2">Truthiness Rules</h4>
-                <p class="text-sm text-[var(--fg-muted)]">Follows C semantics: <code class="font-mono">0</code> and <code class="font-mono">0.0</code> are false; all other values are true.</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 class="text-xl font-semibold mb-4">I/O: printf</h3>
-              <div class="code-block mb-6">
-                <pre class="p-4 font-mono text-sm"><code><span class="fn">printf</span>(<span class="num">42</span>);         <span class="cmt">// prints: 42</span>
-<span class="fn">printf</span>(<span class="num">3.14</span>);       <span class="cmt">// prints: 3.14</span>
-<span class="fn">printf</span>(x + y);      <span class="cmt">// prints computed sum</span></code></pre>
-              </div>
-              
-              <h3 class="text-xl font-semibold mb-4">Comments</h3>
-              <div class="code-block">
-                <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;   <span class="cmt">// this is a comment</span>
-x = <span class="num">42</span>;  <span class="cmt">// assign value</span></code></pre>
-              </div>
-            </div>
           </div>
         </div>
         
         <!-- Scoping -->
         <div id="scoping-content" class="tab-panel hidden">
-          <div class="grid lg:grid-cols-2 gap-8">
-            <div>
-              <h3 class="text-xl font-semibold mb-4">Block Scoping</h3>
-              <p class="text-[var(--fg-muted)] mb-4">Blocks introduce new lexical scopes. Variables declared inside are destroyed when the block exits.</p>
-              
-              <div class="code-block">
-                <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;
+          <div class="code-block max-w-2xl">
+            <pre class="p-4 font-mono text-sm"><code><span class="kw">int</span> x;
 x = <span class="num">10</span>;
-
 {
-    <span class="kw">int</span> y;           <span class="cmt">// y exists only here</span>
-    y = <span class="num">20</span>;
     <span class="kw">int</span> x;           <span class="cmt">// shadows outer x</span>
     x = <span class="num">99</span>;
     <span class="fn">printf</span>(x);       <span class="cmt">// prints: 99</span>
 }
-
 <span class="fn">printf</span>(x);           <span class="cmt">// prints: 10</span></code></pre>
-              </div>
-            </div>
-            
-            <div>
-              <h3 class="text-xl font-semibold mb-4">Variable Shadowing</h3>
-              <p class="text-[var(--fg-muted)] mb-4">An inner scope may declare a variable with the same name as an outer scope.</p>
-              
-              <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-4">
-                <div class="flex items-start gap-3">
-                  <svg class="w-5 h-5 text-[var(--accent)] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                  <div>
-                    <h4 class="font-semibold mb-1">Stack-based Symbol Table</h4>
-                    <p class="text-sm text-[var(--fg-muted)]">Efficient scope enter/exit with O(d) lookup where d = nesting depth.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -478,7 +394,7 @@ x = <span class="num">10</span>;
   </section>
 
   <!-- Footer -->
-  <footer class="py-16 border-t border-[var(--border)]">
+  <footer class="py-16 border-t border-[var(--border)] relative z-10">
     <div class="max-w-7xl mx-auto px-6 text-center">
       <p class="text-sm text-[var(--fg-muted)]">MIT License.</p>
     </div>
@@ -487,103 +403,20 @@ x = <span class="num">10</span>;
   <script>
     (function() {
       'use strict';
-
-      // Token Types
-      const TokenType = {
-        INT: 'INT', FLOAT: 'FLOAT', IF: 'IF', ELSE: 'ELSE', PRINTF: 'PRINTF',
-        IDENTIFIER: 'IDENTIFIER', INT_LITERAL: 'INT_LITERAL', FLOAT_LITERAL: 'FLOAT_LITERAL', STRING_LITERAL: 'STRING_LITERAL',
-        PLUS: 'PLUS', MINUS: 'MINUS', STAR: 'STAR', SLASH: 'SLASH',
-        GT: 'GT', LT: 'LT', EQ: 'EQ', ASSIGN: 'ASSIGN',
-        LPAREN: 'LPAREN', RPAREN: 'RPAREN', LBRACE: 'LBRACE', RBRACE: 'RBRACE', SEMI: 'SEMI', EOF: 'EOF'
-      };
-
+      const TokenType = { INT: 'INT', FLOAT: 'FLOAT', IF: 'IF', ELSE: 'ELSE', PRINTF: 'PRINTF', IDENTIFIER: 'IDENTIFIER', INT_LITERAL: 'INT_LITERAL', FLOAT_LITERAL: 'FLOAT_LITERAL', STRING_LITERAL: 'STRING_LITERAL', PLUS: 'PLUS', MINUS: 'MINUS', STAR: 'STAR', SLASH: 'SLASH', GT: 'GT', LT: 'LT', EQ: 'EQ', ASSIGN: 'ASSIGN', LPAREN: 'LPAREN', RPAREN: 'RPAREN', LBRACE: 'LBRACE', RBRACE: 'RBRACE', SEMI: 'SEMI', EOF: 'EOF' };
       const KEYWORDS = { 'int': TokenType.INT, 'float': TokenType.FLOAT, 'if': TokenType.IF, 'else': TokenType.ELSE, 'printf': TokenType.PRINTF };
-
-      class Token {
-        constructor(type, value, line, column) { this.type = type; this.value = value; this.line = line; this.column = column; }
-      }
-
-      // Lexer
+      class Token { constructor(type, value, line, column) { this.type = type; this.value = value; this.line = line; this.column = column; } }
       class Lexer {
         constructor(source) { this.source = source; this.pos = 0; this.line = 1; this.column = 1; }
         peek() { return this.pos >= this.source.length ? null : this.source[this.pos]; }
-        advance() {
-          const ch = this.source[this.pos++];
-          if (ch === '\n') { this.line++; this.column = 1; } else { this.column++; }
-          return ch;
-        }
+        advance() { const ch = this.source[this.pos++]; if (ch === '\n') { this.line++; this.column = 1; } else { this.column++; } return ch; }
         skipWhitespace() { while (this.peek() && /\s/.test(this.peek())) this.advance(); }
-        skipComment() {
-          if (this.peek() === '/' && this.source[this.pos + 1] === '/') {
-            while (this.peek() && this.peek() !== '\n') this.advance();
-            return true;
-          }
-          return false;
-        }
-        readNumber() {
-          const startLine = this.line, startCol = this.column;
-          let num = '', isFloat = false;
-          while (this.peek() && (/\d/.test(this.peek()) || this.peek() === '.')) {
-            if (this.peek() === '.') { if (isFloat) break; isFloat = true; }
-            num += this.advance();
-          }
-          if (num.endsWith('.')) isFloat = true;
-          if (num.startsWith('.')) { num = '0' + num; isFloat = true; }
-          const value = isFloat ? parseFloat(num) : parseInt(num, 10);
-          return new Token(isFloat ? TokenType.FLOAT_LITERAL : TokenType.INT_LITERAL, value, startLine, startCol);
-        }
-        readString() {
-          const startLine = this.line, startCol = this.column;
-          this.advance(); // skip opening quote
-          let str = '';
-          while (this.peek() && this.peek() !== '"') {
-            if (this.peek() === '\\') {
-              this.advance();
-              const escaped = this.advance();
-              if (escaped === 'n') str += '\n'; else if (escaped === 't') str += '\t'; else str += escaped;
-            } else str += this.advance();
-          }
-          if (!this.peek()) throw new Error(`LexerError at line ${startLine}, column ${startCol}: Unterminated string`);
-          this.advance(); // skip closing quote
-          return new Token(TokenType.STRING_LITERAL, str, startLine, startCol);
-        }
-        readIdentifier() {
-          const startLine = this.line, startCol = this.column;
-          let id = '';
-          while (this.peek() && /[a-zA-Z0-9_]/.test(this.peek())) id += this.advance();
-          return new Token(KEYWORDS[id] || TokenType.IDENTIFIER, id, startLine, startCol);
-        }
-        tokenize() {
-          const tokens = [];
-          while (this.pos < this.source.length) {
-            this.skipWhitespace(); if (this.skipComment()) continue; this.skipWhitespace();
-            if (this.pos >= this.source.length) break;
-            const ch = this.peek();
-            const startLine = this.line, startCol = this.column;
-            if (/\d/.test(ch) || (ch === '.' && /\d/.test(this.source[this.pos + 1] || ''))) tokens.push(this.readNumber());
-            else if (ch === '"') tokens.push(this.readString());
-            else if (/[a-zA-Z_]/.test(ch)) tokens.push(this.readIdentifier());
-            else if (ch === '+') { this.advance(); tokens.push(new Token(TokenType.PLUS, '+', startLine, startCol)); }
-            else if (ch === '-') { this.advance(); tokens.push(new Token(TokenType.MINUS, '-', startLine, startCol)); }
-            else if (ch === '*') { this.advance(); tokens.push(new Token(TokenType.STAR, '*', startLine, startCol)); }
-            else if (ch === '/') { this.advance(); tokens.push(new Token(TokenType.SLASH, '/', startLine, startCol)); }
-            else if (ch === '>') { this.advance(); tokens.push(new Token(TokenType.GT, '>', startLine, startCol)); }
-            else if (ch === '<') { this.advance(); tokens.push(new Token(TokenType.LT, '<', startLine, startCol)); }
-            else if (ch === '=' && this.source[this.pos + 1] === '=') { this.advance(); this.advance(); tokens.push(new Token(TokenType.EQ, '==', startLine, startCol)); }
-            else if (ch === '=') { this.advance(); tokens.push(new Token(TokenType.ASSIGN, '=', startLine, startCol)); }
-            else if (ch === '(') { this.advance(); tokens.push(new Token(TokenType.LPAREN, '(', startLine, startCol)); }
-            else if (ch === ')') { this.advance(); tokens.push(new Token(TokenType.RPAREN, ')', startLine, startCol)); }
-            else if (ch === '{') { this.advance(); tokens.push(new Token(TokenType.LBRACE, '{', startLine, startCol)); }
-            else if (ch === '}') { this.advance(); tokens.push(new Token(TokenType.RBRACE, '}', startLine, startCol)); }
-            else if (ch === ';') { this.advance(); tokens.push(new Token(TokenType.SEMI, ';', startLine, startCol)); }
-            else { this.advance(); throw new Error(`LexerError at line ${startLine}, column ${startCol}: Unexpected character '${ch}'`); }
-          }
-          tokens.push(new Token(TokenType.EOF, null, this.line, this.column));
-          return tokens;
-        }
+        skipComment() { if (this.peek() === '/' && this.source[this.pos + 1] === '/') { while (this.peek() && this.peek() !== '\n') this.advance(); return true; } return false; }
+        readNumber() { const startLine = this.line, startCol = this.column; let num = '', isFloat = false; while (this.peek() && (/\d/.test(this.peek()) || this.peek() === '.')) { if (this.peek() === '.') { if (isFloat) break; isFloat = true; } num += this.advance(); } if (num.endsWith('.')) isFloat = true; if (num.startsWith('.')) { num = '0' + num; isFloat = true; } const value = isFloat ? parseFloat(num) : parseInt(num, 10); return new Token(isFloat ? TokenType.FLOAT_LITERAL : TokenType.INT_LITERAL, value, startLine, startCol); }
+        readString() { const startLine = this.line, startCol = this.column; this.advance(); let str = ''; while (this.peek() && this.peek() !== '"') { if (this.peek() === '\\') { this.advance(); const escaped = this.advance(); if (escaped === 'n') str += '\n'; else if (escaped === 't') str += '\t'; else str += escaped; } else str += this.advance(); } if (!this.peek()) throw new Error(`LexerError at line ${startLine}, column ${startCol}: Unterminated string`); this.advance(); return new Token(TokenType.STRING_LITERAL, str, startLine, startCol); }
+        readIdentifier() { const startLine = this.line, startCol = this.column; let id = ''; while (this.peek() && /[a-zA-Z0-9_]/.test(this.peek())) id += this.advance(); return new Token(KEYWORDS[id] || TokenType.IDENTIFIER, id, startLine, startCol); }
+        tokenize() { const tokens = []; while (this.pos < this.source.length) { this.skipWhitespace(); if (this.skipComment()) continue; this.skipWhitespace(); if (this.pos >= this.source.length) break; const ch = this.peek(); const startLine = this.line, startCol = this.column; if (/\d/.test(ch) || (ch === '.' && /\d/.test(this.source[this.pos + 1] || ''))) tokens.push(this.readNumber()); else if (ch === '"') tokens.push(this.readString()); else if (/[a-zA-Z_]/.test(ch)) tokens.push(this.readIdentifier()); else if (ch === '+') { this.advance(); tokens.push(new Token(TokenType.PLUS, '+', startLine, startCol)); } else if (ch === '-') { this.advance(); tokens.push(new Token(TokenType.MINUS, '-', startLine, startCol)); } else if (ch === '*') { this.advance(); tokens.push(new Token(TokenType.STAR, '*', startLine, startCol)); } else if (ch === '/') { this.advance(); tokens.push(new Token(TokenType.SLASH, '/', startLine, startCol)); } else if (ch === '>') { this.advance(); tokens.push(new Token(TokenType.GT, '>', startLine, startCol)); } else if (ch === '<') { this.advance(); tokens.push(new Token(TokenType.LT, '<', startLine, startCol)); } else if (ch === '=' && this.source[this.pos + 1] === '=') { this.advance(); this.advance(); tokens.push(new Token(TokenType.EQ, '==', startLine, startCol)); } else if (ch === '=') { this.advance(); tokens.push(new Token(TokenType.ASSIGN, '=', startLine, startCol)); } else if (ch === '(') { this.advance(); tokens.push(new Token(TokenType.LPAREN, '(', startLine, startCol)); } else if (ch === ')') { this.advance(); tokens.push(new Token(TokenType.RPAREN, ')', startLine, startCol)); } else if (ch === '{') { this.advance(); tokens.push(new Token(TokenType.LBRACE, '{', startLine, startCol)); } else if (ch === '}') { this.advance(); tokens.push(new Token(TokenType.RBRACE, '}', startLine, startCol)); } else if (ch === ';') { this.advance(); tokens.push(new Token(TokenType.SEMI, ';', startLine, startCol)); } else { this.advance(); throw new Error(`LexerError at line ${startLine}, column ${startCol}: Unexpected character '${ch}'`); } } tokens.push(new Token(TokenType.EOF, null, this.line, this.column)); return tokens; }
       }
-
-      // AST Nodes
       class ASTNode {}
       class Program extends ASTNode { constructor(statements) { super(); this.statements = statements; } }
       class Declaration extends ASTNode { constructor(name, type, line, col) { super(); this.name = name; this.varType = type; this.line = line; this.col = col; } }
@@ -596,109 +429,25 @@ x = <span class="num">10</span>;
       class NumberLiteral extends ASTNode { constructor(value, line, col) { super(); this.value = value; this.line = line; this.col = col; } }
       class StringLiteral extends ASTNode { constructor(value, line, col) { super(); this.value = value; this.line = line; this.col = col; } }
       class Identifier extends ASTNode { constructor(name, line, col) { super(); this.name = name; this.line = line; this.col = col; } }
-
-      // Parser
       class Parser {
         constructor(tokens) { this.tokens = tokens; this.pos = 0; }
         current() { return this.tokens[this.pos]; }
         advance() { return this.tokens[this.pos++]; }
-        expect(type, message) {
-          const token = this.current();
-          if (!token || token.type !== type) throw new Error(`ParserError at line ${token ? token.line : 'EOF'}, column ${token ? token.column : 0}: ${message}`);
-          return this.advance();
-        }
-        parse() {
-          const statements = [];
-          while (this.current() && this.current().type !== TokenType.EOF) { const stmt = this.parseStatement(); if (stmt) statements.push(stmt); }
-          return new Program(statements);
-        }
-        parseStatement() {
-          const token = this.current();
-          if (token.type === TokenType.INT || token.type === TokenType.FLOAT) return this.parseDeclaration();
-          if (token.type === TokenType.IF) return this.parseIfStatement();
-          if (token.type === TokenType.LBRACE) return this.parseBlock();
-          if (token.type === TokenType.PRINTF) return this.parsePrintf();
-          if (token.type === TokenType.IDENTIFIER) return this.parseAssignment();
-          if (token.type === TokenType.SEMI) { this.advance(); return null; }
-          throw new Error(`ParserError at line ${token.line}, column ${token.column}: Unexpected token '${token.value}'`);
-        }
-        parseDeclaration() {
-          const typeToken = this.advance();
-          const nameToken = this.expect(TokenType.IDENTIFIER, "Expected identifier after type");
-          this.expect(TokenType.SEMI, "Expected ';' after declaration");
-          return new Declaration(nameToken.value, typeToken.value, typeToken.line, typeToken.column);
-        }
-        parseAssignment() {
-          const nameToken = this.advance();
-          this.expect(TokenType.ASSIGN, "Expected '=' in assignment");
-          const value = this.parseExpression();
-          this.expect(TokenType.SEMI, "Expected ';' after assignment");
-          return new Assignment(nameToken.value, value, nameToken.line, nameToken.column);
-        }
-        parseIfStatement() {
-          const ifToken = this.advance();
-          this.expect(TokenType.LPAREN, "Expected '(' after 'if'");
-          const condition = this.parseExpression();
-          this.expect(TokenType.RPAREN, "Expected ')' after condition");
-          const thenBranch = this.parseStatement();
-          let elseBranch = null;
-          if (this.current() && this.current().type === TokenType.ELSE) { this.advance(); elseBranch = this.parseStatement(); }
-          return new IfStatement(condition, thenBranch, elseBranch, ifToken.line, ifToken.column);
-        }
-        parseBlock() {
-          const lbrace = this.advance();
-          const statements = [];
-          while (this.current() && this.current().type !== TokenType.RBRACE && this.current().type !== TokenType.EOF) { const stmt = this.parseStatement(); if (stmt) statements.push(stmt); }
-          this.expect(TokenType.RBRACE, "Expected '}' to close block");
-          return new Block(statements, lbrace.line, lbrace.column);
-        }
-        parsePrintf() {
-          const printfToken = this.advance();
-          this.expect(TokenType.LPAREN, "Expected '(' after 'printf'");
-          const expr = this.parseExpression();
-          this.expect(TokenType.RPAREN, "Expected ')' after printf argument");
-          this.expect(TokenType.SEMI, "Expected ';' after printf call");
-          return new PrintfCall(expr, printfToken.line, printfToken.column);
-        }
+        expect(type, message) { const token = this.current(); if (!token || token.type !== type) throw new Error(`ParserError at line ${token ? token.line : 'EOF'}, column ${token ? token.column : 0}: ${message}`); return this.advance(); }
+        parse() { const statements = []; while (this.current() && this.current().type !== TokenType.EOF) { const stmt = this.parseStatement(); if (stmt) statements.push(stmt); } return new Program(statements); }
+        parseStatement() { const token = this.current(); if (token.type === TokenType.INT || token.type === TokenType.FLOAT) return this.parseDeclaration(); if (token.type === TokenType.IF) return this.parseIfStatement(); if (token.type === TokenType.LBRACE) return this.parseBlock(); if (token.type === TokenType.PRINTF) return this.parsePrintf(); if (token.type === TokenType.IDENTIFIER) return this.parseAssignment(); if (token.type === TokenType.SEMI) { this.advance(); return null; } throw new Error(`ParserError at line ${token.line}, column ${token.column}: Unexpected token '${token.value}'`); }
+        parseDeclaration() { const typeToken = this.advance(); const nameToken = this.expect(TokenType.IDENTIFIER, "Expected identifier after type"); this.expect(TokenType.SEMI, "Expected ';' after declaration"); return new Declaration(nameToken.value, typeToken.value, typeToken.line, typeToken.column); }
+        parseAssignment() { const nameToken = this.advance(); this.expect(TokenType.ASSIGN, "Expected '=' in assignment"); const value = this.parseExpression(); this.expect(TokenType.SEMI, "Expected ';' after assignment"); return new Assignment(nameToken.value, value, nameToken.line, nameToken.column); }
+        parseIfStatement() { const ifToken = this.advance(); this.expect(TokenType.LPAREN, "Expected '(' after 'if'"); const condition = this.parseExpression(); this.expect(TokenType.RPAREN, "Expected ')' after condition"); const thenBranch = this.parseStatement(); let elseBranch = null; if (this.current() && this.current().type === TokenType.ELSE) { this.advance(); elseBranch = this.parseStatement(); } return new IfStatement(condition, thenBranch, elseBranch, ifToken.line, ifToken.column); }
+        parseBlock() { const lbrace = this.advance(); const statements = []; while (this.current() && this.current().type !== TokenType.RBRACE && this.current().type !== TokenType.EOF) { const stmt = this.parseStatement(); if (stmt) statements.push(stmt); } this.expect(TokenType.RBRACE, "Expected '}' to close block"); return new Block(statements, lbrace.line, lbrace.column); }
+        parsePrintf() { const printfToken = this.advance(); this.expect(TokenType.LPAREN, "Expected '(' after 'printf'"); const expr = this.parseExpression(); this.expect(TokenType.RPAREN, "Expected ')' after printf argument"); this.expect(TokenType.SEMI, "Expected ';' after printf call"); return new PrintfCall(expr, printfToken.line, printfToken.column); }
         parseExpression() { return this.parseRelational(); }
-        parseRelational() {
-          let left = this.parseAdditive();
-          while (this.current() && (this.current().type === TokenType.GT || this.current().type === TokenType.LT || this.current().type === TokenType.EQ)) {
-            const op = this.advance(); const right = this.parseAdditive(); left = new BinaryOp(left, op.value, right, op.line, op.column);
-          }
-          return left;
-        }
-        parseAdditive() {
-          let left = this.parseMultiplicative();
-          while (this.current() && (this.current().type === TokenType.PLUS || this.current().type === TokenType.MINUS)) {
-            const op = this.advance(); const right = this.parseMultiplicative(); left = new BinaryOp(left, op.value, right, op.line, op.column);
-          }
-          return left;
-        }
-        parseMultiplicative() {
-          let left = this.parseUnary();
-          while (this.current() && (this.current().type === TokenType.STAR || this.current().type === TokenType.SLASH)) {
-            const op = this.advance(); const right = this.parseUnary(); left = new BinaryOp(left, op.value, right, op.line, op.column);
-          }
-          return left;
-        }
-        parseUnary() {
-          if (this.current() && (this.current().type === TokenType.PLUS || this.current().type === TokenType.MINUS)) {
-            const op = this.advance(); const operand = this.parseUnary(); return new UnaryOp(op.value, operand, op.line, op.column);
-          }
-          return this.parsePrimary();
-        }
-        parsePrimary() {
-          const token = this.current();
-          if (token.type === TokenType.INT_LITERAL || token.type === TokenType.FLOAT_LITERAL) { this.advance(); return new NumberLiteral(token.value, token.line, token.column); }
-          if (token.type === TokenType.STRING_LITERAL) { this.advance(); return new StringLiteral(token.value, token.line, token.column); }
-          if (token.type === TokenType.IDENTIFIER) { this.advance(); return new Identifier(token.value, token.line, token.column); }
-          if (token.type === TokenType.LPAREN) { this.advance(); const expr = this.parseExpression(); this.expect(TokenType.RPAREN, "Expected ')' after expression"); return expr; }
-          throw new Error(`ParserError at line ${token.line}, column ${token.column}: Unexpected token '${token.value}'`);
-        }
+        parseRelational() { let left = this.parseAdditive(); while (this.current() && (this.current().type === TokenType.GT || this.current().type === TokenType.LT || this.current().type === TokenType.EQ)) { const op = this.advance(); const right = this.parseAdditive(); left = new BinaryOp(left, op.value, right, op.line, op.column); } return left; }
+        parseAdditive() { let left = this.parseMultiplicative(); while (this.current() && (this.current().type === TokenType.PLUS || this.current().type === TokenType.MINUS)) { const op = this.advance(); const right = this.parseMultiplicative(); left = new BinaryOp(left, op.value, right, op.line, op.column); } return left; }
+        parseMultiplicative() { let left = this.parseUnary(); while (this.current() && (this.current().type === TokenType.STAR || this.current().type === TokenType.SLASH)) { const op = this.advance(); const right = this.parseUnary(); left = new BinaryOp(left, op.value, right, op.line, op.column); } return left; }
+        parseUnary() { if (this.current() && (this.current().type === TokenType.PLUS || this.current().type === TokenType.MINUS)) { const op = this.advance(); const operand = this.parseUnary(); return new UnaryOp(op.value, operand, op.line, op.column); } return this.parsePrimary(); }
+        parsePrimary() { const token = this.current(); if (token.type === TokenType.INT_LITERAL || token.type === TokenType.FLOAT_LITERAL) { this.advance(); return new NumberLiteral(token.value, token.line, token.column); } if (token.type === TokenType.STRING_LITERAL) { this.advance(); return new StringLiteral(token.value, token.line, token.column); } if (token.type === TokenType.IDENTIFIER) { this.advance(); return new Identifier(token.value, token.line, token.column); } if (token.type === TokenType.LPAREN) { this.advance(); const expr = this.parseExpression(); this.expect(TokenType.RPAREN, "Expected ')' after expression"); return expr; } throw new Error(`ParserError at line ${token.line}, column ${token.column}: Unexpected token '${token.value}'`); }
       }
-
-      // Symbol & SymbolTable
       class Symbol { constructor(name, type, value, initialized) { this.name = name; this.varType = type; this.value = value; this.initialized = initialized || false; } }
       class SymbolTable {
         constructor() { this.scopes = [{}]; }
@@ -710,8 +459,6 @@ x = <span class="num">10</span>;
         lookup(name) { for (let i = this.scopes.length - 1; i >= 0; i--) { if (this.scopes[i][name] !== undefined) return this.scopes[i][name]; } throw new Error(`SemanticError: Undefined variable '${name}'`); }
         getAllVariables() { const vars = []; this.scopes.forEach((scope, idx) => { Object.values(scope).forEach(sym => { vars.push({ scope: idx, name: sym.name, type: sym.varType, value: sym.value, initialized: sym.initialized }); }); }); return vars; }
       }
-
-      // Interpreter
       class Interpreter {
         constructor() { this.symbolTable = new SymbolTable(); this.output = []; }
         interpret(program) { this.output = []; program.statements.forEach(stmt => { if (stmt) this.execute(stmt); }); return this.output; }
@@ -730,13 +477,7 @@ x = <span class="num">10</span>;
         }
         isTruthy(value) { return value !== 0 && value !== 0.0; }
       }
-
-      // Terminal Interface
-      const terminalOutput = document.getElementById('terminal-output');
-      const terminalInput = document.getElementById('terminal-input');
-      const clearBtn = document.getElementById('clear-terminal');
-      const resetBtn = document.getElementById('reset-state');
-      let interpreter = new Interpreter(); let history = []; let historyIndex = -1;
+      const terminalOutput = document.getElementById('terminal-output'); const terminalInput = document.getElementById('terminal-input'); const clearBtn = document.getElementById('clear-terminal'); const resetBtn = document.getElementById('reset-state'); let interpreter = new Interpreter(); let history = []; let historyIndex = -1;
       function appendLine(text, className) { const line = document.createElement('div'); line.className = 'terminal-line ' + (className || ''); line.textContent = text; terminalOutput.appendChild(line); terminalOutput.scrollTop = terminalOutput.scrollHeight; }
       function executeCode(code) { code = code.trim(); if (!code) return; history.push(code); historyIndex = history.length; appendLine('>>> ' + code, ''); if (code.startsWith(':')) { handleCommand(code); return; } try { const lexer = new Lexer(code); const tokens = lexer.tokenize(); const parser = new Parser(tokens); const ast = parser.parse(); const output = interpreter.interpret(ast); output.forEach(line => appendLine(line, 'terminal-success')); } catch (e) { appendLine(e.message, 'terminal-error'); } }
       function handleCommand(cmd) { const parts = cmd.toLowerCase().split(/\s+/); const command = parts[0]; if (command === ':help') { appendLine('Commands: :help, :vars, :clear', 'terminal-info'); } else if (command === ':vars') { const vars = interpreter.symbolTable.getAllVariables(); if (vars.length === 0) appendLine('No variables.', 'terminal-info'); else vars.forEach(v => appendLine(`  ${v.name} (${v.type}) = ${v.initialized ? v.value : 'uninit'}`, '')); } else if (command === ':clear' || command === ':reset') { interpreter = new Interpreter(); appendLine('State reset.', 'terminal-success'); } }
